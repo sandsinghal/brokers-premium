@@ -13,26 +13,43 @@ A graduate data-mining project testing a classic 30-year-old theory of social ca
 
 For three decades, Ronald Burt's *structural holes* theory has argued that people who bridge disconnected groups enjoy a success premium — faster promotions, higher pay, better ideas. The theory has been validated across managers, scientists, investment bankers, and TQM teams. It has **never been rigorously tested on a creator platform**.
 
-We test it on the SNAP Twitch Gamers dataset — **168,114 streamers** linked by **6.8 million mutual-follow ties**, with Twitch Affiliate status (the platform's monetization gate) as a clean binary success outcome.
+We test it on the SNAP Twitch Gamers dataset — **168,114 streamers** linked by **6.8 million mutual-follow ties**, with Twitch Affiliate status (the platform's monetization gate, ~49% prevalence) as a clean binary success outcome. The analytical sample is **165,009 streamers** (mega-hubs with degree > 500 are excluded for computational tractability).
 
-We operationalize "bridge" three ways — ego-network brokerage (Burt's classical constraint), cross-community bridging via Louvain, and cross-language bridging — and find them **nearly uncorrelated**. Controlling for degree, account age, and language-majority status:
+We operationalize "bridge" three ways — ego-network brokerage (Burt's classical constraint), cross-community bridging via Louvain, and cross-language bridging — and find them nearly uncorrelated (pairwise Spearman 0.07–0.26). Controlling for degree, account age, and language-majority status:
 
-| Bridge type | Odds Ratio (per 1-SD) | Verdict |
-|---|---|---|
-| **Ego-network brokerage** (Burt 1992) | **1.32** [1.29, 1.35] | 🟢 **Pays** |
-| Structural community bridging (Louvain) | 1.01 [1.00, 1.03] | ⚪ ~flat |
-| **Cross-language bridging** | **0.93** [0.92, 0.95] | 🔴 **Hurts** |
+| Bridge type | Odds Ratio (per 1-SD) | 95% CI | Verdict |
+|---|---|---|---|
+| **Ego-network brokerage** (Burt 1992) | **1.320** | [1.293, 1.348] | 🟢 **Pays** (p < 0.001) |
+| Structural community bridging (Louvain) | 1.014 | [1.001, 1.028] | ⚪ Flat on average (hides subgroup heterogeneity) |
+| **Cross-language bridging** | **0.933** | [0.919, 0.946] | 🔴 **Hurts** (p < 0.001) |
 
-Burt's theory survives at the ego-network scale but inverts at cultural boundaries. Two additional findings sharpen this:
+**McFadden pseudo-R² = 0.094.** A likelihood-ratio test confirms the bridge measures add joint explanatory power beyond controls (χ² = 920.92 on 3 df, p ≈ 0).
 
-- **The affiliate-vs-views inversion:** brokerage *helps* affiliation but *hurts* viewership; cross-language bridging *hurts* affiliation but *helps* viewership. The two success metrics reward opposite network structures.
-- **The English/non-English asymmetry:** the cross-language penalty is entirely a majority-language phenomenon. Non-English streamers who bridge *toward* English are rewarded (OR ≈ 1.23); English streamers who bridge outward are penalized (OR ≈ 0.91). Formally confirmed by an interaction test.
+### Additional findings that sharpen the picture
+
+- **English/non-English asymmetry (formally confirmed by interaction test).** `pc_language × is_english` OR = **0.733** (p < 0.001). Disaggregated: non-English speakers who bridge *toward* English are rewarded (OR = 1.23); English speakers who bridge *outward* are penalized (OR = 0.91). The penalty is a majority-language phenomenon.
+- **Affiliate-vs-views inversion.** An OLS on `log_views` (R² = 0.35) reveals that brokerage *hurts* total views (coef = −0.19), while cross-language bridging *helps* total views (coef = +0.23). **Affiliate and views reward opposite network structures** — depth within a community vs. reach across them. "Creator success" is not a single thing.
+- **Structural heterogeneity of `pc_louvain`.** Flat at the aggregate but strongly positive for English speakers and large streamers (OR ≈ 1.03–1.15) and strongly negative for non-English speakers and small streamers (OR ≈ 0.80–0.96). The aggregate null masks two opposing subgroup effects.
+- **Bridge burnout — null result honestly reported.** Burt's (2004) specific brokerage-cost prediction on churn is **not supported** (brokerage OR = 1.024 on `dead_account`, p = 0.14). Two ancillary findings: structural community bridging predicts higher churn (OR = 1.25); cross-language bridging predicts *lower* churn (OR = 0.71). These are interesting but are not confirmations of Burt's theoretical mechanism.
+
+### Robustness
+
+- **Node2vec robustness:** a fourth, partition-free bridge measure (participation coefficient over node2vec embedding clusters) leaves the main regression coefficients virtually unchanged. The finding is not an artifact of Louvain specifically.
+- **VIFs all < 2.3** — no multicollinearity.
+- **Calibration Brier score = 0.219** (vs. 0.25 uninformative baseline); predicted probabilities track observed rates across deciles.
+- **Propensity-score matching ATT = −8.6pp** for the composite broker label (reflects net effect across the three opposing measures).
+
+### Honest limitation on predictive power
+
+Adding the three bridge measures to the controls-only model lifts 5-fold CV AUC only modestly — **0.698 → 0.701**. The bridge measures are **statistically and theoretically significant, but predictively secondary**. This is consistent with a theory-test scope (effect identification, not prediction), and we report it transparently rather than overclaim.
 
 ---
 
 ## Research question
 
 > **On Twitch, do streamers who bridge disconnected communities enjoy a success premium — as Burt's classic social-capital theory predicts — after controlling for reach and tenure? And does the answer depend on what kind of bridge we mean?**
+
+**Answer:** Yes, at the ego-network scale (Burt replicates). No, at linguistic boundaries (the theory inverts). Subgroup-dependent in between.
 
 ---
 
@@ -48,26 +65,27 @@ A 2-minute narrated slide deck introducing the motivation, method, and headline 
 
 ```
 .
-├── README.md                       <- this file
-├── main_notebook.ipynb             <- 👉 THE MAIN DELIVERABLE — start here
-├── requirements.txt                <- pip freeze from the Colab session
+├── README.md                       ← this file
+├── main_notebook.ipynb             ← 👉 THE MAIN DELIVERABLE — start here (50 cells)
+├── requirements.txt                ← pip freeze from the Colab session
+├── SUBMISSION_CHECKLIST.md         ← step-by-step submission guide
 ├── .gitignore
 │
-├── checkpoints/                    <- semester-progression artifacts (graded earlier)
-│   ├── checkpoint_1.ipynb          <- three candidate datasets (explored, then narrowed)
-│   └── checkpoint_2.ipynb          <- three candidate RQs (narrowed to one per guidance)
+├── checkpoints/                    ← semester-progression artifacts (graded earlier)
+│   ├── checkpoint_1.ipynb          ← three candidate datasets (explored, then narrowed)
+│   └── checkpoint_2.ipynb          ← three candidate RQs (narrowed to one per guidance)
 │
-├── src/                            <- reusable helper modules
+├── src/                            ← reusable helper modules
 │   ├── __init__.py
-│   └── graph_metrics.py            <- participation_coefficient, fit_logit_with_inference, compute_vif
+│   └── graph_metrics.py            ← participation_coefficient, fit_logit_with_inference, compute_vif
 │
 ├── scripts/
-│   └── download_data.py            <- fetches SNAP Twitch Gamers (~15MB) into .data/
+│   └── download_data.py            ← fetches SNAP Twitch Gamers (~15MB) into .data/
 │
-├── data/                           <- raw data lives here locally (gitignored; see below)
-├── cache/                          <- gitignored; expensive computations are cached here
+├── data/                           ← raw data lives here locally (gitignored)
+├── cache/                          ← gitignored; expensive computations are cached here
 └── assets/
-    └── figures/                    <- PNGs rendered by the notebook (forest plots, calibration, etc.)
+    └── figures/                    ← PNGs rendered by the notebook
 ```
 
 ---
@@ -76,8 +94,8 @@ A 2-minute narrated slide deck introducing the motivation, method, and headline 
 
 **Dataset:** [SNAP Twitch Gamers](https://snap.stanford.edu/data/twitch-social-networks.html) (Rozemberczki & Sarkar, 2021)
 
-- 168,114 nodes (Twitch streamers, snapshot Spring 2018)
-- 6,797,557 edges (mutual-follow ties, undirected)
+- 168,114 nodes (Twitch streamers, snapshot ca. Spring 2018)
+- 6,797,557 edges (mutual-follow ties, undirected; graph is a single connected component)
 - Node attributes: `views`, `language`, `created_at`, `updated_at`, `life_time`, `affiliate`, `dead_account`, `mature`
 
 The dataset is **not committed** to the repo (≈15 MB zipped). Download it with:
@@ -92,14 +110,14 @@ Or run the notebook — it fetches + extracts on first run.
 - Degree computed from edge counts; log-transformed to tame the long tail
 - Account age derived from `created_at` against the snapshot date (Oct 2018)
 - `life_time` dropped from regression controls due to collinearity with `account_age_days`
-- Burt's constraint computed only for nodes with degree ≤ 500 (~98.2% of the sample) for computational tractability; mega-hubs are flagged and excluded
-- Both NetworkX and igraph graph objects are built — NetworkX for flexibility, igraph for C-speed centrality
+- Burt's constraint computed only for nodes with degree ≤ 500 (~98.2% of the sample); mega-hubs flagged and excluded
+- Both NetworkX and igraph graph objects built — NetworkX for flexibility, igraph for C-speed centrality
 
 ---
 
 ## How to reproduce
 
-**Everything was built in Google Colab (T4 GPU runtime, ~12GB RAM).** The full pipeline:
+**Built in Google Colab (default runtime, 12 GB RAM, no GPU required).** Full pipeline:
 
 1. **Clone the repo:**
    ```bash
@@ -114,23 +132,28 @@ Or run the notebook — it fetches + extracts on first run.
    - Downloads the dataset (~15 MB) if not already present
    - Computes all graph metrics and caches them under `cache/`
    - Produces all figures under `assets/figures/`
+   - Writes a final results JSON to `cache/final_results.json`
 
 **Runtime:**
-- First run from scratch: ~45 minutes (dominated by Louvain ~3–5 min, Burt's constraint ~2 min, and node2vec ~20–30 min)
+- First run from scratch: ~20–25 minutes
+  - Louvain: ~9 min
+  - Burt's constraint: ~9 min
+  - Node2vec: ~7 min
+  - Other: ~1 min
 - Subsequent runs with caches: ~30 seconds
 
-**Memory note:** node2vec is the heaviest step. We use a memory-safe implementation (dim=32, walk_len=10, num_walks=5, streaming walks + gensim Word2Vec) that stays under ~8GB peak RAM. If it still OOMs on a lower-memory machine, the notebook gracefully skips the node2vec robustness check — the main findings do not depend on it.
+**Memory note:** Node2vec is the heaviest step. We use a memory-safe implementation (dim=32, walk_len=10, num_walks=5, streaming walks + gensim Word2Vec, MiniBatchKMeans clustering) that stays under ~8 GB peak RAM. If it still OOMs on a lower-memory machine, the notebook gracefully skips the node2vec robustness check — the main findings do not depend on it.
 
 ---
 
 ## Key dependencies
 
-Built with:
+Built with (Python 3.12, Colab Apr 2026):
 
 | Package | Version |
 |---|---|
-| Python | 3.12 (Colab default Apr 2026) |
-| numpy | < 2.0 (pinned — pandas/statsmodels compatibility) |
+| Python | 3.12 (Colab default) |
+| numpy | < 2.0 (pinned — pandas compatibility) |
 | pandas | ≥ 2.0 |
 | scipy | ≥ 1.11 |
 | scikit-learn | ≥ 1.4 |
@@ -145,7 +168,7 @@ Full list in [`requirements.txt`](requirements.txt).
 
 ---
 
-## Results summary
+## Results visualized
 
 ### The main finding
 
@@ -154,28 +177,14 @@ Full list in [`requirements.txt`](requirements.txt).
 Three operationalizations of "bridge" predict Affiliate status in three directions:
 
 - **Ego-network brokerage pays** (Burt's theory replicates at the local scale)
-- **Structural community bridging is flat** (Louvain spans often occur within-language)
+- **Structural community bridging is flat on average** (but masks strong subgroup heterogeneity — see below)
 - **Cross-language bridging is penalized** (audience fragmentation breaks the theory at cultural boundaries)
 
 ### Where the premium lives
 
 ![Heterogeneity across subgroups](assets/figures/fig_heterogeneity.png)
 
-The cross-language penalty is entirely a majority-language (English-speaker) phenomenon; minority-language streamers bridging to English are rewarded. Formally confirmed via interaction test.
-
-### Model diagnostics
-
-- **Likelihood-ratio test:** bridge measures add joint explanatory power beyond controls (p < 10⁻³⁰⁰)
-- **VIFs:** all < 5 — no multicollinearity concerns after dropping `life_time`
-- **5-fold CV AUC:** improves from ~0.62 (controls only) to ~0.64 (with bridge measures) — modest but statistically real discrimination gain
-- **Brier score:** ~0.23 — calibrated probabilistic predictions
-- **Propensity-score matching ATT:** confirms the composite broker label's net effect; balance SMDs all < 0.06
-
-### Robustness
-
-- **OLS on log_views** (continuous outcome): signs partially flip — affiliate rewards *depth*, views reward *reach*. A novel, separate finding.
-- **Node2vec robustness check:** a fourth, partition-free bridge measure based on node2vec-clustered embeddings is consistent with the main pattern (brokerage coefficient unchanged after controlling for pc_n2v).
-- **Bridge burnout:** Burt's "brokerage cost" hypothesis partially supported — structural community bridging predicts higher churn (OR ≈ 1.25); cross-language bridging, interestingly, predicts *lower* churn.
+The cross-language penalty is entirely a majority-language (English-speaker) phenomenon; minority-language streamers bridging to English are rewarded. Formally confirmed via the interaction test (`pc_language × is_english` OR = 0.733, p < 0.001).
 
 ---
 
@@ -184,7 +193,8 @@ The cross-language penalty is entirely a majority-language (English-speaker) phe
 - **Cross-sectional snapshot (2018)** — our findings are correlational, not causal. A longitudinal panel would support within-streamer fixed effects, dramatically strengthening identification.
 - **Degree cap on Burt's constraint** excludes ~1.8% mega-hubs — conservative for our scientific question but limits generalizability to elite streamers.
 - **One platform, one year.** Whether the cross-language penalty holds in 2025 or on YouTube/TikTok is an open question.
-- **Future directions:** longitudinal panel with fixed effects; instrumental-variable designs using exogenous network churn; direct audience-overlap measurement to test the fragmentation mechanism; a cross-platform replication; a field experiment in partnership with Twitch.
+- **Modest predictive gain.** The bridge measures add ~0.003 AUC points — strong effect identification, weaker prediction. Honest about scope: this is a theory-test, not a predictive engineering project.
+- **Future directions:** longitudinal panel with fixed effects; instrumental-variable designs using exogenous network churn; direct audience-overlap measurement to test the fragmentation mechanism; cross-platform replication; field experiment in partnership with Twitch.
 
 ---
 
